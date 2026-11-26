@@ -55,13 +55,16 @@ async def upload_voice(file:UploadFile=File(...)):
 
 @app.post("/api/voice-preview")
 def voice_preview(data:VoicePreviewRequest):
-    try: return preview_voice(data.text,data.engine,data.voice_id,data.voice_reference)
+    try:
+        return preview_voice(data.text,data.engine,data.voice_id,data.voice_reference,
+                             data.exaggeration,data.cfg_weight,data.temperature)
     except Exception as exc: raise HTTPException(400,str(exc))
 
 @app.post("/api/render")
 def render(data:RenderRequest):
     try:
         return render_video(data.storyboard,data.style,data.format,data.voice_engine,data.voice_id,data.voice_reference,
+                           data.exaggeration,data.cfg_weight,data.temperature,data.visual_engine,
                            data.captions,data.caption_style,data.target_seconds,data.title)
     except Exception as exc: raise HTTPException(400,str(exc))
 

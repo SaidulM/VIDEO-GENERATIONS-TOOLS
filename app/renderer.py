@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from PIL import Image, ImageDraw, ImageFont
 from .config import OUTPUTS
 from .tts import synthesize
+from .ai_video import generate_scene_clip
 
 SIZE={"short":(1080,1920),"long":(1920,1080)}
 THEMES={
@@ -82,7 +83,8 @@ def stamp(seconds):
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 def render_video(storyboard,style="cinematic",project_format="short",voice_engine="none",
-                 voice_id="hm_omega",voice_reference=None,captions=True,caption_style="bold",
+                 voice_id="chatterbox-v3",voice_reference=None,exaggeration=0.5,cfg_weight=0.5,
+                 temperature=0.8,visual_engine="motion_cards",captions=True,caption_style="bold",
                  target_seconds=45,title=None):
     scenes=storyboard.get("scenes") or []
     if not scenes: raise ValueError("Storyboard has no scenes.")
@@ -91,7 +93,9 @@ def render_video(storyboard,style="cinematic",project_format="short",voice_engin
     width,height=SIZE.get(project_format,SIZE["short"])
     narration=str(storyboard.get("full_narration") or " ".join(str(s.get("narration","")) for s in scenes))
     voice=None; audio=temp/"voice.wav"
-    if voice_engine!="none": voice=synthesize(narration,audio,voice_engine,voice_id,"hi",voice_reference)
+    if voice_engine!="none":
+        voice=synthesize(narration,audio,voice_engine,voice_id,"hi",voice_reference,
+                         exaggeration,cfg_weight,temperature)
     duration=float(target_seconds)
     if voice:
         try:
@@ -103,11 +107,22 @@ def render_video(storyboard,style="cinematic",project_format="short",voice_engin
     segments=[]; manifest=[]; cursor=0.0
     for i,(scene,weight) in enumerate(zip(scenes,weights)):
         seconds=duration*weight/total; img=temp/f"scene-{i:02d}.png"; clip=temp/f"clip-{i:02d}.mp4"
-        make_card(img,i,len(scenes),scene,style,title or storyboard.get("title","Short Story Speaker"),captions,caption_style,width,height)
-        frames=max(1,int(math.ceil(seconds*30)))
-        vf=f"scale={width}:{height},zoompan=z='min(zoom+0.0005,1.06)':d=1:s={width}x{height}:fps=30,format=yuv420p"
-        cmd=[ffmpeg,"-y","-loop","1","-i",str(img),"-t",f"{seconds:.3f}","-vf",vf,"-r","30","-frames:v",str(frames),"-an","-c:v","libx264","-preset","ultrafast","-crf","24",str(clip)]
-        p=subprocess.run(cmd,capture_output=True,text=True,timeout=max(180,int(seconds*20)))
+        if visual_engine == "animatediff":
+            raw_clip=temp/f"ai-scene-{i:02d}.mp4"
+            prompt=str(scene.get("visual_prompt") or scene.get("narration") or "").strip()
+            generate_scene_clip(prompt,raw_clip,style=style,seed=42+i,frames=16)
+            vf=f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},fps=30,format=yuv420p"
+            cmd=[ffmpeg,"-y","-stream_loop","-1","-i",str(raw_clip),"-t",f"{seconds:.3f}","-vf",vf,
+                 "-an","-c:v","libx264","-preset","ultrafast","-crf","24",str(clip)]
+        elif visual_engine == "motion_cards":
+            make_card(img,i,len(scenes),scene,style,title or storyboard.get("title","Short Story Speaker"),captions,caption_style,width,height)
+            frames=max(1,int(math.ceil(seconds*30)))
+            vf=f"scale={width}:{height},zoompan=z='min(zoom+0.0005,1.06)':d=1:s={width}x{height}:fps=30,format=yuv420p"
+            cmd=[ffmpeg,"-y","-loop","1","-i",str(img),"-t",f"{seconds:.3f}","-vf",vf,"-r","30","-frames:v",str(frames),
+                 "-an","-c:v","libx264","-preset","ultrafast","-crf","24",str(clip)]
+        else:
+            raise ValueError("Unknown visual engine. Choose motion_cards or animatediff.")
+        p=subprocess.run(cmd,capture_output=True,text=True,timeout=max(240,int(seconds*30)))
         if p.returncode: raise RuntimeError("FFmpeg scene render failed: "+p.stderr[-900:])
         segments.append(clip); manifest.append({"scene_id":scene.get("id",f"scene-{i+1}"),"start_seconds":round(cursor,3),"end_seconds":round(cursor+seconds,3),"duration_seconds":round(seconds,3),"narration":scene.get("narration",""),"visual_prompt":scene.get("visual_prompt","")}); cursor+=seconds
     concat_file=temp/"concat.txt"
@@ -132,12 +147,17 @@ def render_video(storyboard,style="cinematic",project_format="short",voice_engin
     (out/"storyboard.json").write_text(json.dumps(storyboard,ensure_ascii=False,indent=2),encoding="utf-8")
     times={"format":project_format,"width":width,"height":height,"fps":30,"duration_seconds":round(duration,3),"scenes":manifest,"caption_segments":caps}
     (out/"timestamps.json").write_text(json.dumps(times,ensure_ascii=False,indent=2),encoding="utf-8")
-    meta={"job_id":job_id,"created_at":datetime.now(timezone.utc).isoformat(),"renderer":"Pillow + FFmpeg motion cards","style":style,"voice":voice or {"engine":"none"},"captions_burned_in":bool(captions),"note":"Template motion graphics; not photorealistic generated footage."}
+    meta={"job_id":job_id,"created_at":datetime.now(timezone.utc).isoformat(),
+          "renderer":"AnimateDiff-Lightning + FFmpeg" if visual_engine=="animatediff" else "Pillow + FFmpeg motion cards",
+          "visual_engine":visual_engine,"style":style,"voice":voice or {"engine":"none"},
+          "captions_burned_in":bool(captions),
+          "note":"AI footage was generated by AnimateDiff-Lightning." if visual_engine=="animatediff" else "Template motion graphics; not AI-generated footage."}
     (out/"render_manifest.json").write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding="utf-8")
     return {"job_id":job_id,"video_url":f"/outputs/{job_id}/video.mp4","captions_url":f"/outputs/{job_id}/captions.srt","timestamps_url":f"/outputs/{job_id}/timestamps.json","storyboard_url":f"/outputs/{job_id}/storyboard.json","manifest_url":f"/outputs/{job_id}/render_manifest.json","duration_seconds":round(duration,3)}
 
-def preview_voice(text,engine,voice_id,voice_reference=None):
+def preview_voice(text,engine="chatterbox",voice_id="chatterbox-v3",voice_reference=None,
+                  exaggeration=0.5,cfg_weight=0.5,temperature=0.8):
     job=uuid.uuid4().hex[:12]; path=OUTPUTS/job/"preview.wav"; path.parent.mkdir(parents=True,exist_ok=True)
-    result=synthesize(text,path,engine,voice_id,"hi",voice_reference)
-    if not result: raise ValueError("Select a voice engine to preview.")
+    result=synthesize(text,path,engine,voice_id,"hi",voice_reference,exaggeration,cfg_weight,temperature)
+    if not result: raise ValueError("Select Chatterbox or upload no narration.")
     return {"audio_url":f"/outputs/{job}/preview.wav"}
