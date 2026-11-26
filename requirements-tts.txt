@@ -1,0 +1,5 @@
+# Optional local Hindi Kokoro TTS
+kokoro>=0.9.4
+soundfile>=0.12
+# Experimental Chatterbox is not installed by default:
+# Follow https://github.com/resemble-ai/chatterbox and install its compatible PyTorch stack.
