@@ -1,57 +1,22 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Short Story Studio</title><link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="shell">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Short Story Studio</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><div class="shell">
 <header><div><div class="eyebrow">SHORT STORY SPEAKER · CREATOR WORKSPACE</div><h1>Short Story <span>Studio</span></h1><p>Script → scenes → voice → motion graphics → export</p></div><button id="settingsOpen" class="ghost">⚙ Settings</button></header>
-<div class="statusbar"><span id="health">Checking studio…</span><span id="skillCount">Skills: —</span><span>Local-first · 9:16 Shorts</span></div>
+<div class="statusbar"><span id="health">Checking studio…</span><span id="skillCount">Skills: —</span><span>Local-first · Shorts + long-form draft</span></div>
 <main>
-<section class="panel">
-<div class="sectionhead"><div><div class="eyebrow">01 / STORY INPUT</div><h2>What is your video about?</h2></div><span class="tag">Prompt-driven</span></div>
+<section class="panel"><div class="sectionhead"><div><div class="eyebrow">01 / STORY INPUT</div><h2>What is your video about?</h2></div><span class="tag">Prompt-driven</span></div>
 <label>Topic / working title</label><input id="topic" placeholder="e.g. Jumu'ah: one powerful Sunnah people forget">
-<label>Paste your script <small>(Roman Hinglish recommended for narration)</small></label><textarea id="script" rows="7" placeholder="Paste your complete script here. The studio will preserve your meaning and split it into scenes."></textarea>
-<label>Optional scene directions <small>(one direction per line)</small></label><textarea id="sceneNotes" rows="3" placeholder="Scene 1: rainy old city street at dawn&#10;Scene 2: close-up of an antique book, no readable scripture"></textarea>
-<div class="grid three">
-<div><label>Video format</label><select id="format"><option value="short">YouTube Shorts · 9:16</option><option value="long">Long video draft · 16:9</option></select></div>
-<div><label>Visual style</label><select id="style"><option value="cinematic">Cinematic documentary</option><option value="islamic_geometry">Islamic geometric art</option><option value="cyberpunk">Cyberpunk</option><option value="clay">Clay-like animation</option><option value="3d">3D-inspired</option><option value="minimal">Minimal editorial</option></select></div>
-<div><label>Script language</label><select id="language"><option value="hinglish">Roman Hinglish</option><option value="hindi">Hindi</option><option value="bengali">Bengali</option><option value="english">English</option></select></div>
-</div>
-<div class="actions"><button id="draftBtn" class="primary">✦ Create storyboard</button><span id="draftStatus" class="muted"></span></div>
-</section>
-<section class="panel">
-<div class="sectionhead"><div><div class="eyebrow">02 / SCENE EDITOR</div><h2>Review your scenes</h2></div><button id="addScene" class="ghost">＋ Add scene</button></div>
-<div id="scenes" class="empty">Your editable scene plan will appear here.</div>
-<div class="grid three">
-<div><label>Voice engine</label><select id="voiceEngine"><option value="kokoro">Kokoro · local Hindi voices</option><option value="none">No narration</option><option value="chatterbox">Chatterbox · experimental cloning</option></select></div>
-<div><label>Voice</label><select id="voiceId"><option value="hm_omega">Hindi male · Omega</option><option value="hm_psi">Hindi male · Psi</option><option value="hf_alpha">Hindi female · Alpha</option><option value="hf_beta">Hindi female · Beta</option><option value="reference">My permitted reference voice</option></select></div>
-<div><label>Caption treatment</label><select id="captionStyle"><option value="bold">Bold subtitles</option><option value="highlight">Gold highlight</option><option value="minimal">Minimal</option></select></div>
-</div>
+<label>Paste your script <small>(Roman Hinglish recommended for narration)</small></label><textarea id="script" rows="7" placeholder="Paste your complete script here. The studio will preserve its meaning and split it into scenes."></textarea>
+<label>Optional scene directions <small>(one direction per line)</small></label><textarea id="sceneNotes" rows="3" placeholder="Scene 1: rainy old city street at dawn&#10;Scene 2: antique book close-up, no readable scripture"></textarea>
+<div class="grid three"><div><label>Video format</label><select id="format"><option value="short">YouTube Shorts · 9:16</option><option value="long">Long video draft · 16:9</option></select></div><div><label>Visual style</label><select id="style"><option value="cinematic">Cinematic documentary</option><option value="islamic_geometry">Islamic geometric art</option><option value="cyberpunk">Cyberpunk</option><option value="clay">Clay-like animation</option><option value="3d">3D-inspired</option><option value="minimal">Minimal editorial</option></select></div><div><label>Script language</label><select id="language"><option value="hinglish">Roman Hinglish</option><option value="hindi">Hindi</option><option value="bengali">Bengali</option><option value="english">English</option></select></div></div>
+<div class="actions"><button id="draftBtn" class="primary">✦ Create storyboard</button><span id="draftStatus" class="muted"></span></div></section>
+<section class="panel"><div class="sectionhead"><div><div class="eyebrow">02 / SCENE EDITOR</div><h2>Review your scenes</h2></div><button id="addScene" class="ghost">＋ Add scene</button></div><div id="scenes" class="empty">Your editable scene plan will appear here.</div>
+<div class="grid three"><div><label>Voice engine</label><select id="voiceEngine"><option value="kokoro">Kokoro · local Hindi voices</option><option value="none">No narration</option><option value="chatterbox">Chatterbox · experimental cloning</option></select></div><div><label>Voice</label><select id="voiceId"><option value="hm_omega">Hindi male · Omega</option><option value="hm_psi">Hindi male · Psi</option><option value="hf_alpha">Hindi female · Alpha</option><option value="hf_beta">Hindi female · Beta</option></select></div><div><label>Caption treatment</label><select id="captionStyle"><option value="bold">Bold subtitles</option><option value="highlight">Gold highlight</option><option value="minimal">Minimal</option></select></div></div>
+<div id="referenceBox" hidden><label>Reference voice recording <small>(only your voice or a voice you have permission to use)</small></label><input id="voiceFile" type="file" accept="audio/*"><span id="uploadStatus" class="muted"></span></div>
 <div class="row"><button id="previewVoice" class="ghost">▶ Preview voice</button><span id="voiceStatus" class="muted">Install optional Kokoro package to preview local Hindi voices.</span></div>
-<div class="grid two">
-<div><label>Target length (seconds)</label><input id="duration" type="number" min="10" max="1800" value="45"></div>
-<div><label>Burn captions into video</label><select id="captions"><option value="yes">Yes</option><option value="no">No</option></select></div>
-</div>
-<div class="actions"><button id="renderBtn" class="primary" disabled>▶ Render video</button><span id="renderStatus" class="muted"></span></div>
-</section>
-<section class="panel">
-<div class="sectionhead"><div><div class="eyebrow">03 / OUTPUT</div><h2>Preview & export</h2></div><span class="tag">MP4 · SRT · timestamps</span></div>
-<div id="output" class="empty">Your rendered video and project files will appear here.</div>
-</section>
-</main>
-<footer>Short Story Studio · Local workspace · Verify Islamic references and generated claims before publishing.</footer>
-</div>
-<dialog id="settingsDialog">
-<form method="dialog" class="dialoghead"><div><div class="eyebrow">PROVIDER CONFIGURATION</div><h2>AI settings</h2></div><button class="ghost" value="cancel">✕</button></form>
-<div class="dialogbody">
-<label>LLM provider</label><select id="provider"><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="ollama">Ollama · local</option></select>
-<label>Exact model ID</label><input id="model" placeholder="e.g. openrouter/free">
-<label>API key <small>Saved only in local .env.local; never returned to the browser.</small></label><input id="apiKey" type="password" autocomplete="off" placeholder="Paste provider key">
-<p class="hint">No API key? You can still build a template storyboard and render motion-card videos. Hosted provider quotas and free tiers can change.</p>
-<div class="actions"><button id="saveSettings" type="button" class="primary">Save settings</button><span id="settingsStatus" class="muted"></span></div>
-</div>
-</dialog>
-<script src="/static/app.js"></script>
-</body></html>
+<div class="grid two"><div><label>Target length (seconds)</label><input id="duration" type="number" min="10" max="1800" value="45"></div><div><label>Burn captions into video</label><select id="captions"><option value="yes">Yes</option><option value="no">No</option></select></div></div>
+<div class="actions"><button id="renderBtn" class="primary" disabled>▶ Render video</button><span id="renderStatus" class="muted"></span></div></section>
+<section class="panel"><div class="sectionhead"><div><div class="eyebrow">03 / OUTPUT</div><h2>Preview & export</h2></div><span class="tag">MP4 · SRT · timestamps</span></div><div id="output" class="empty">Your rendered video and project files will appear here.</div></section>
+</main><footer>Short Story Studio · Local workspace · Verify Islamic references and generated claims before publishing.</footer></div>
+<dialog id="settingsDialog"><form method="dialog" class="dialoghead"><div><div class="eyebrow">PROVIDER CONFIGURATION</div><h2>AI settings</h2></div><button class="ghost" value="cancel">✕</button></form><div class="dialogbody"><label>LLM provider</label><select id="provider"><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="ollama">Ollama · local</option></select><label>Exact model ID</label><input id="model" placeholder="e.g. openrouter/free"><label>API key <small>Saved only in local .env.local; never returned to browser.</small></label><input id="apiKey" type="password" autocomplete="off" placeholder="Paste provider key"><p class="hint">No key? Template storyboards and motion-card renders still work. Hosted quotas and free tiers can change.</p><div class="actions"><button id="saveSettings" type="button" class="primary">Save settings</button><span id="settingsStatus" class="muted"></span></div></div></dialog>
+<script src="/static/app.js"></script></body></html>
