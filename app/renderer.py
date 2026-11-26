@@ -82,6 +82,35 @@ def stamp(seconds):
     ms=int(round(seconds*1000)); h,ms=divmod(ms,3600000); m,ms=divmod(ms,60000); s,ms=divmod(ms,1000)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
+def make_caption_overlay(path, scene, caption_style, width, height):
+    """Render a transparent subtitle layer for AI-generated footage."""
+    _, _, accent, fg = THEMES.get("cinematic", THEMES["minimal"])
+    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(canvas, "RGBA")
+    unit = min(width, height)
+    margin = int(width * 0.09)
+    body = font(max(28, int(unit * 0.041)), True)
+    lines = wrap(draw, str(scene.get("narration") or ""), body, width - 2 * margin)[:5]
+    if not lines:
+        canvas.save(path)
+        return
+    line_h = int(unit * (0.054 if caption_style == "minimal" else 0.062))
+    box_h = line_h * len(lines) + int(unit * 0.05)
+    box_y = height - box_h - int(height * 0.09)
+    draw.rounded_rectangle(
+        (margin // 2, box_y, width - margin // 2, height - int(height * 0.065)),
+        radius=int(unit * 0.025),
+        fill=(0, 0, 0, 185),
+        outline=(*accent, 150),
+        width=2,
+    )
+    y = box_y + int(unit * 0.025)
+    for line in lines:
+        color = (*accent, 255) if caption_style == "highlight" else (*fg, 255)
+        draw.text((margin, y), line, font=body, fill=color)
+        y += line_h
+    canvas.save(path)
+
 def render_video(storyboard,style="cinematic",project_format="short",voice_engine="none",
                  voice_id="chatterbox-v3",voice_reference=None,exaggeration=0.5,cfg_weight=0.5,
                  temperature=0.8,visual_engine="motion_cards",captions=True,caption_style="bold",
@@ -112,8 +141,15 @@ def render_video(storyboard,style="cinematic",project_format="short",voice_engin
             prompt=str(scene.get("visual_prompt") or scene.get("narration") or "").strip()
             generate_scene_clip(prompt,raw_clip,style=style,seed=42+i,frames=16)
             vf=f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},fps=30,format=yuv420p"
-            cmd=[ffmpeg,"-y","-stream_loop","-1","-i",str(raw_clip),"-t",f"{seconds:.3f}","-vf",vf,
-                 "-an","-c:v","libx264","-preset","ultrafast","-crf","24",str(clip)]
+            cmd=[ffmpeg,"-y","-stream_loop","-1","-i",str(raw_clip)]
+            if captions:
+                caption_png=temp/f"caption-{i:02d}.png"
+                make_caption_overlay(caption_png,scene,caption_style,width,height)
+                filter_graph=f"[0:v]{vf}[base];[1:v]format=rgba[caption];[base][caption]overlay=0:0:shortest=1,format=yuv420p[out]"
+                cmd += ["-loop","1","-i",str(caption_png),"-filter_complex",filter_graph,"-map","[out]"]
+            else:
+                cmd += ["-vf",vf]
+            cmd += ["-t",f"{seconds:.3f}","-an","-c:v","libx264","-preset","ultrafast","-crf","24",str(clip)]
         elif visual_engine == "motion_cards":
             make_card(img,i,len(scenes),scene,style,title or storyboard.get("title","Short Story Speaker"),captions,caption_style,width,height)
             frames=max(1,int(math.ceil(seconds*30)))

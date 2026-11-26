@@ -16,7 +16,7 @@ No LTX-2.5, Wan 2.2 14B, or other 20B+ video model is installed. There are no mo
 
 ## Important hardware truth
 
-The older laptop previously described (i3, 8 GB RAM, no dedicated GPU) can run the editor, storyboard templates, motion-card renderer, captions and FFmpeg assembly. It is **not suitable for AnimateDiff diffusion inference or practical Chatterbox voice cloning**. Chatterbox can technically run on CPU but will be very slow.
+The older laptop previously described (i3, 8 GB RAM, no dedicated GPU) can run the editor, storyboard templates, motion-card renderer, captions and FFmpeg assembly. It is **not suitable for AnimateDiff diffusion inference or practical Chatterbox voice cloning**. This compact integration deliberately requires CUDA for Chatterbox and refuses to run it on CPU, so the laptop will not hang while attempting a long voice-generation job.
 
 Use Google Colab for the optional GPU tasks. Free Colab GPU allocation is not guaranteed; hardware and usage limits vary. If a GPU is not assigned, the notebook still runs the CPU motion-graphics workflow. If a model runs out of memory, reduce the number of generated scenes or use motion cards. The app never silently switches an AI-video request to template cards.
 
