@@ -2,103 +2,90 @@
 
 Prompt-to-video workstation for the Short Story Speaker channel. Paste a topic or script, generate an editable storyboard, select a visual style and narration voice, preview the voice, then render a vertical MP4 with captions, an SRT file and timestamp JSON.
 
-## Included in this first release
+## Included
 
 - FastAPI web app with prompt/script editor, optional scene notes and editable scene plan.
-- LLM provider selector: OpenRouter, Groq, DeepSeek, Gemini, OpenAI and local Ollama. The exact model ID is selected by the user; no silent model switching.
-- Deterministic storyboard mode when no LLM key is configured. It is labelled as template mode, not passed off as AI.
-- Motion-graphic renderer based on Pillow and FFmpeg with cinematic, Islamic geometric, cyberpunk, clay-like, 3D-inspired and minimal themes.
-- Optional Hindi Kokoro TTS with voice preview. Hindi voice IDs: hm_omega, hm_psi, hf_alpha, hf_beta.
-- Experimental Chatterbox multilingual adapter for Hindi voice-reference conditioning; it is optional and upstream is archived.
-- ComfyUI API workflow submit/history endpoints for GPU-based image/video generation on a separate machine or Colab.
-- Drop-in prompt skills: add a folder with SKILL.md under skills/ and restart.
-- Short 9:16 and long-form 16:9 profiles. Short is the primary workflow; long-form is a starter profile to review.
+- LLM provider selector: OpenRouter, Groq, DeepSeek, Gemini, OpenAI and local Ollama. Exact model ID is selected by the user; no silent model switching.
+- Template storyboard mode when no LLM key is configured. It is labelled as template mode.
+- Pillow + FFmpeg motion-graphic renderer: cinematic, Islamic geometric, cyberpunk, clay-like, 3D-inspired and minimal themes.
+- Optional Hindi Kokoro TTS with four previewable preset voices.
+- Experimental Chatterbox multilingual adapter for Hindi voice-reference conditioning; optional, larger and archived upstream.
+- ComfyUI API workflow submit/history endpoints for GPU-based generation on another machine or Colab.
+- Drop-in prompt skills in skills/<skill-name>/SKILL.md.
+- Short 9:16 and long-form 16:9 profiles. Short is primary; long is a starter profile.
 
-> This repository stores application code and configuration, not AI checkpoint weights. Model files are downloaded separately by their own runtimes. GitHub Actions runs tests, not GPU video inference.
+> Repository contains app code, not AI checkpoint weights. Model weights are downloaded by their own runtimes. GitHub Actions tests code; it does not perform GPU inference.
 
 ## Hardware and free-tier reality
 
-The previously described laptop (older i3, 8 GB RAM, no dedicated GPU specified) can run the lightweight editor and template-based FFmpeg motion graphics, but it is not suitable for modern local video diffusion or heavy voice cloning.
+Your previously described older i3 / 8 GB laptop can run the editor and template FFmpeg motion graphics, but not modern local video diffusion or heavy voice cloning. There is no single free model that generates photorealistic video, natural Hindi voice cloning, soundtrack and edits on every computer. Hosted free tiers are rate-limited and can change.
 
-There is no single free model that reliably generates cinematic realistic video, natural Hindi voice cloning, soundtrack and final edits on every device. Hosted free tiers are rate-limited and may change. A provider API key does not mean unlimited free usage.
-
-- Kokoro-82M is the recommended lightweight Hindi TTS starting point. It has four fixed Hindi voices and does not clone a user's voice.
-- Chatterbox Multilingual supports Hindi and voice-reference conditioning, but its upstream repository was archived in August 2026. It is optional and experimental. Verify the specific checkpoint license before monetized use.
-- LTX-2.5 supports native multi-shot video and synchronized audio/video. The code repository is Apache-2.0, but the weights use the LTX-2.x Community License, not an OSI-approved open-source license. The listed full model bundle is about 66 GiB. Standard configuration recommends 80 GB VRAM; the low-VRAM path is described for 32 GB GPUs. This is not a default for an 8 GB laptop or a typical free Colab T4.
-- Wan2.2's 14B text-to-video recipe calls for an 80 GB GPU. Smaller variants exist but need separate evaluation.
-- No model or provider is silently substituted after an error. The app reports an actionable error.
+- Kokoro-82M is the recommended lightweight local Hindi TTS start. Four fixed Hindi voices; no voice cloning.
+- Chatterbox multilingual supports Hindi and reference audio, but upstream was archived in August 2026. Experimental; check checkpoint terms before monetized use.
+- LTX-2.5 offers multi-shot synchronized video/audio. Code repo is Apache-2.0; weights use the LTX-2.x Community License, not OSI-approved open-source. Full bundle is about 66 GiB; standard setup recommends 80 GB VRAM, with a low-VRAM path described for 32 GB GPUs. Not suitable for the 8 GB laptop or typical free Colab T4.
+- Wan2.2 14B text-to-video recipe calls for an 80 GB GPU. Smaller variants require separate evaluation.
+- No provider/model is silently switched after an error.
 
 ## Windows quick start
 
-Install Python 3.11 (64-bit), Git and FFmpeg. Ensure the command ffmpeg -version works.
+Install Python 3.11 (64-bit), Git and FFmpeg. Double-click setup_windows.bat once, then start_windows.bat. Or use CMD:
 
     py -3.11 -m venv .venv
     .venv\Scripts\activate
-    python -m pip install --upgrade pip
     pip install -r requirements.txt
     copy .env.example .env.local
     uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-Open http://127.0.0.1:8000. In Settings, select a provider, enter its key and exact model ID, and save. Keys are stored in the ignored local .env.local file; never commit it.
+Open http://127.0.0.1:8000. In Settings, choose a provider, enter its API key and exact model ID, then save. Keys are written to ignored local .env.local; never commit it.
 
-For local Kokoro Hindi voice synthesis:
-
-    pip install -r requirements-tts.txt
-
-The first generation downloads model assets. Hindi pronunciation works best with Devanagari input; Roman Hinglish may need pronunciation review.
+For local Kokoro Hindi voice synthesis, run pip install -r requirements-tts.txt. First generation downloads model assets. Hindi pronunciation is best with Devanagari; Roman Hinglish may need review.
 
 ## Google Colab
 
-Open notebooks/colab_studio.ipynb in Colab. The notebook installs the lightweight application and exposes its UI through the notebook. Colab storage is temporary; download output files before disconnecting. A GPU runtime does not guarantee enough VRAM for LTX or Wan.
+Open notebooks/colab_studio.ipynb in Colab. It installs the lightweight application. The Colab session is temporary; download output before disconnecting. GPU runtime does not guarantee enough VRAM for LTX or Wan.
 
-## Providers
+## LLM providers
 
-| Provider | OpenAI-compatible base URL | Notes |
+| Provider | Base URL | Notes |
 |---|---|---|
-| OpenRouter | https://openrouter.ai/api/v1 | Free model variants are rate-limited; openrouter/free can route to an eligible model |
-| Groq | https://api.groq.com/openai/v1 | Hosted inference; quotas and models can change |
+| OpenRouter | https://openrouter.ai/api/v1 | Free variants rate-limited; openrouter/free routes to an eligible model |
+| Groq | https://api.groq.com/openai/v1 | Hosted inference; quotas/catalog change |
 | DeepSeek | https://api.deepseek.com | Choose a model ID available to your account |
-| Gemini | https://generativelanguage.googleapis.com/v1beta/openai/ | Gemini OpenAI-compatible endpoint |
+| Gemini | https://generativelanguage.googleapis.com/v1beta/openai/ | OpenAI-compatible endpoint |
 | OpenAI | https://api.openai.com/v1 | API usage may be paid |
-| Ollama | http://localhost:11434/v1 | Local model server; hardware-dependent |
+| Ollama | http://localhost:11434/v1 | Local server; hardware-dependent |
 
-Use the model ID currently shown in your provider dashboard. The app does not guess model IDs.
+Enter the exact model ID currently shown in your provider dashboard.
 
 ## Voice
 
-Kokoro local voices are preset, lightweight and previewable. They do not clone a user's voice. Chatterbox is optional, much heavier, supports Hindi and reference-audio conditioning upstream, but is archived; use only a recording you own or have permission to use. A future hosted TTS adapter can be added without changing the renderer.
+Kokoro preset Hindi voices: hm_omega, hm_psi, hf_alpha, hf_beta. They do not clone your voice. Chatterbox requires a reference recording you own or have permission to use. The Chatterbox adapter is experimental and upstream archived. Future hosted TTS adapters can be added without changing the renderer.
 
 ## Realistic B-roll with ComfyUI
 
-Run ComfyUI on a suitable GPU machine or hosted GPU, export a workflow in API format, then call POST /api/comfyui/submit with the workflow JSON and X-ComfyUI-URL header. The endpoint submits the workflow and returns its prompt ID. Query GET /api/comfyui/history/{prompt_id}. It does not download checkpoints or rewrite incompatible workflows. Do not expose an unauthenticated ComfyUI server publicly.
+Run ComfyUI on a suitable GPU machine or hosted GPU. Export a workflow in API format and POST its JSON to /api/comfyui/submit; check /api/comfyui/history/{prompt_id}. This endpoint queues a workflow; it does not install checkpoints or rewrite incompatible workflows. Keep ComfyUI private and trusted.
 
 ## Islamic-content safeguards
 
-The storyboard planner must not invent Qur'an quotations, Hadith wording, verse numbers, narrator chains, scholarly rulings or historical claims. Add exact references in your script and verify them before publishing. Default visuals avoid depicting Allah, prophets or angels; use symbolic environments, architecture, landscapes, geometric art and licensed calligraphy. Review script and visuals before publishing.
+The planner must not invent Qur'an quotations, Hadith wording, verse numbers, narrator chains, rulings or historical claims. Add exact references in your script and verify them before publishing. Default visuals avoid depictions of Allah, prophets and angels; use symbolic environments, architecture, landscapes, geometry and licensed calligraphy. Review generated scripts and visuals before publishing.
 
 ## Add-on skills
 
-Create a new folder in skills/ with a SKILL.md file. The app reads installed skill text and includes it in storyboard planning. Skills are prompt instructions, not executable Python modules. Example future skills: Quran reference checking, B-roll shot design, long-form editing, subtitle styling.
+Add a folder under skills/ with a SKILL.md. Restart the server; its instructions are loaded into storyboard planning. Skills are prompt instructions, not executable plugins. Included: Islamic Shorts Story Editor and Cinematic Visual Shot Designer.
 
 ## Output
 
-Each render writes to workspace/outputs/<job-id>/:
-- video.mp4
-- captions.srt
-- timestamps.json
-- storyboard.json
-- render_manifest.json
-
-Workspace and local secrets are git-ignored.
+Each render creates workspace/outputs/<job-id>/ with video.mp4, captions.srt, timestamps.json, storyboard.json and render_manifest.json. Workspace and secrets are git-ignored.
 
 ## Tests
 
     pip install -r requirements.txt
-    pytest -q
+    python -m compileall -q app tests
+    python -m pytest -q
 
-## Model and project references
+## References
 
-- Motion Canvas, MIT TypeScript animation library/editor: https://github.com/motion-canvas/motion-canvas
+- Motion Canvas (MIT): https://github.com/motion-canvas/motion-canvas
 - LTX-2 / LTX-2.5: https://github.com/Lightricks/LTX-2
 - LTX-2.5 model card/license: https://huggingface.co/Lightricks/LTX-2.5
 - Wan2.2: https://github.com/Wan-Video/Wan2.2
@@ -109,4 +96,4 @@ Workspace and local secrets are git-ignored.
 
 ## License
 
-This application code is MIT licensed. Model weights, datasets, workflows, fonts and media assets have separate terms. Verify all terms before commercial or monetized use.
+Application code is MIT licensed. Model weights, datasets, workflows, fonts and media have separate terms. Verify them before commercial or monetized use.
