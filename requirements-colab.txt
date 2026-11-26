@@ -1,9 +1,0 @@
-# Install these in a fresh Google Colab GPU runtime only.
-# Model weights download lazily into the Colab VM (not into this Git repository).
-chatterbox-tts==0.1.7
-diffusers==0.29.0
-accelerate>=0.30
-safetensors>=0.4
-huggingface_hub>=0.24
-ipywidgets>=8.1
-soundfile>=0.12
