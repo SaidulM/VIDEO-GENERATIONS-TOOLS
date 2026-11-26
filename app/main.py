@@ -1,13 +1,12 @@
 from __future__ import annotations
 import uuid
 from pathlib import Path
-import requests
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from .config import FRONTEND, OUTPUTS, UPLOADS, env
 from .providers import public_provider_list, save_provider_settings
-from .schemas import DraftRequest, RenderRequest, SettingsRequest, VoicePreviewRequest, ComfySubmitRequest
+from .schemas import DraftRequest, RenderRequest, SettingsRequest, VoicePreviewRequest
 from .storyboard import create_storyboard
 from .tts import voice_catalog
 from .renderer import render_video, preview_voice
@@ -67,27 +66,6 @@ def render(data:RenderRequest):
                            data.exaggeration,data.cfg_weight,data.temperature,data.visual_engine,
                            data.captions,data.caption_style,data.target_seconds,data.title)
     except Exception as exc: raise HTTPException(400,str(exc))
-
-@app.post("/api/comfyui/submit")
-def comfy_submit(data:ComfySubmitRequest):
-    base=(data.server_url or env("COMFYUI_URL","http://127.0.0.1:8188")).rstrip("/")
-    from urllib.parse import urlparse
-    parsed=urlparse(base); host=parsed.hostname or ""
-    if parsed.scheme not in {"http","https"} or not parsed.netloc: raise HTTPException(400,"Invalid ComfyUI URL.")
-    if not (host in {"localhost","127.0.0.1","::1"} or host.startswith(("192.168.","10.","172.16.")) or host.endswith(".trycloudflare.com")):
-        raise HTTPException(400,"ComfyUI URL must be localhost, a private LAN address or a trusted trycloudflare tunnel.")
-    try:
-        response=requests.post(base+"/prompt",json={"prompt":data.workflow},timeout=30); response.raise_for_status()
-        return response.json()
-    except requests.RequestException as exc: raise HTTPException(502,"ComfyUI request failed: "+str(exc))
-
-@app.get("/api/comfyui/history/{prompt_id}")
-def comfy_history(prompt_id:str):
-    base=env("COMFYUI_URL","http://127.0.0.1:8188").rstrip("/")
-    try:
-        response=requests.get(base+"/history/"+prompt_id,timeout=20); response.raise_for_status()
-        return response.json()
-    except requests.RequestException as exc: raise HTTPException(502,"ComfyUI history request failed: "+str(exc))
 
 @app.get("/api/download/{job_id}")
 def download(job_id:str):

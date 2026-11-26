@@ -60,7 +60,3 @@ class VoicePreviewRequest(BaseModel):
     exaggeration: float = Field(default=0.5, ge=0.25, le=2.0)
     cfg_weight: float = Field(default=0.5, ge=0.0, le=1.0)
     temperature: float = Field(default=0.8, ge=0.05, le=2.0)
-
-class ComfySubmitRequest(BaseModel):
-    workflow: dict
-    server_url: str | None = None

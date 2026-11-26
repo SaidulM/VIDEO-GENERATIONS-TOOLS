@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from pathlib import Path
 import re
 
@@ -62,6 +61,7 @@ def load_chatterbox(device: str = "cuda"):
         return _CHATTERBOX_MODEL
     except Exception as exc:
         _CHATTERBOX_MODEL = None
+    _CHATTERBOX_DEVICE = None
         _CHATTERBOX_DEVICE = None
         raise RuntimeError(
             "Chatterbox V3 could not load its model assets. Check the Colab GPU, internet access and available RAM/VRAM."
@@ -123,6 +123,7 @@ def synthesize(
         try:
             model.prepare_conditionals(str(reference), exaggeration=float(exaggeration))
         except Exception as exc:
+            unload_chatterbox()
             raise RuntimeError(
                 "Could not read the voice sample. Use a clean 5–10 second WAV/MP3 recording with one speaker."
             ) from exc
@@ -139,6 +140,7 @@ def synthesize(
                 temperature=float(temperature),
             )
         except Exception as exc:
+            unload_chatterbox()
             raise RuntimeError(f"Chatterbox failed while generating narration chunk {index + 1}/{len(chunks)}: {exc}") from exc
         samples = wav.detach().float().cpu().numpy().reshape(-1) if hasattr(wav, "detach") else np.asarray(wav).reshape(-1)
         if samples.size:
@@ -147,6 +149,7 @@ def synthesize(
                 audio_parts.append(np.zeros(int(model.sr * 0.12), dtype=np.float32))
 
     if not audio_parts:
+        unload_chatterbox()
         raise RuntimeError("Chatterbox returned no audio.")
     audio = np.concatenate(audio_parts)
     sf.write(str(target), audio, int(model.sr))

@@ -1,3 +1,5 @@
-# Colab
+# Google Colab
 
-Open colab_studio.ipynb in Google Colab. Use a GPU runtime only for optional GPU models. The built-in template renderer is CPU-based. Download your output before the session ends.
+Open the notebook directly in Colab: https://colab.research.google.com/github/SaidulM/VIDEO-GENERATIONS-TOOLS/blob/main/notebooks/colab_studio.ipynb
+
+The notebook uses native ipywidgets in the Colab notebook itself; it does not launch a standalone web server. Optional Chatterbox and AnimateDiff weights are downloaded on demand to the temporary Colab VM, not committed to GitHub.
