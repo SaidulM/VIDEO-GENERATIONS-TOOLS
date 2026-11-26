@@ -1,66 +1,170 @@
 from __future__ import annotations
-from pathlib import Path
-import numpy as np
 
-KOKORO_VOICES = [
-    {"id":"hm_omega","label":"Hindi male — Omega"},
-    {"id":"hm_psi","label":"Hindi male — Psi"},
-    {"id":"hf_alpha","label":"Hindi female — Alpha"},
-    {"id":"hf_beta","label":"Hindi female — Beta"},
-]
+from functools import lru_cache
+from pathlib import Path
+import re
+
 
 def voice_catalog():
     try:
-        import kokoro  # noqa
-        kokoro_ready = True
+        import chatterbox  # noqa: F401
+        installed = True
     except Exception:
-        kokoro_ready = False
-    rows = [{**voice,"engine":"kokoro","installed":kokoro_ready,"cloning":False} for voice in KOKORO_VOICES]
-    try:
-        import chatterbox  # noqa
-        chatterbox_ready = True
-    except Exception:
-        chatterbox_ready = False
-    rows.append({"id":"reference","label":"Chatterbox multilingual — permitted reference voice",
-                 "engine":"chatterbox","installed":chatterbox_ready,"cloning":True,"experimental":True})
-    rows.append({"id":"none","label":"No narration — captions only","engine":"none","installed":True,"cloning":False})
-    return rows
+        installed = False
+    return [
+        {
+            "id": "chatterbox-v3",
+            "label": "Chatterbox Multilingual V3 — Hindi",
+            "engine": "chatterbox",
+            "installed": installed,
+            "cloning": True,
+            "languages": 23,
+            "note": "Upload a voice sample you own to clone it, or use the built-in speaker.",
+        },
+        {
+            "id": "none",
+            "label": "No narration — captions only",
+            "engine": "none",
+            "installed": True,
+            "cloning": False,
+        },
+    ]
 
-def synthesize(text, output_path, engine, voice_id="hm_omega", language="hi", voice_reference=None):
+
+@lru_cache(maxsize=2)
+def load_chatterbox(device: str = "cuda"):
+    """Load Chatterbox only when requested; cache it for the current process."""
+    try:
+        import torch
+        from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+    except Exception as exc:
+        raise RuntimeError(
+            "Chatterbox is not installed in this runtime. In Colab run: pip install -r requirements-colab.txt"
+        ) from exc
+
+    if device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "No CUDA GPU is available. Use a Colab GPU runtime for Chatterbox, or choose No narration. "
+            "CPU inference is possible but very slow on an older laptop."
+        )
+    selected = torch.device(device)
+    try:
+        return ChatterboxMultilingualTTS.from_pretrained(device=selected, t3_model="v3")
+    except Exception as exc:
+        raise RuntimeError(
+            "Chatterbox V3 could not load its model assets. Check the Colab GPU, internet access and available RAM/VRAM."
+        ) from exc
+
+
+def _text_chunks(text: str, max_chars: int = 260) -> list[str]:
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        raise ValueError("Narration text is empty.")
+    chunks: list[str] = []
+    while len(text) > max_chars:
+        cut = max(text.rfind(mark, 0, max_chars) for mark in (".", "?", "!", ",", "।", " "))
+        if cut < max_chars // 2:
+            cut = max_chars
+        else:
+            cut += 1
+        part = text[:cut].strip()
+        if part:
+            chunks.append(part)
+        text = text[cut:].strip()
+    if text:
+        chunks.append(text)
+    return chunks
+
+
+def synthesize(
+    text: str,
+    output_path: str | Path,
+    engine: str = "chatterbox",
+    voice_id: str = "chatterbox-v3",
+    language: str = "hi",
+    voice_reference: str | None = None,
+    exaggeration: float = 0.5,
+    cfg_weight: float = 0.5,
+    temperature: float = 0.8,
+    device: str | None = None,
+):
     target = Path(output_path)
-    target.parent.mkdir(parents=True,exist_ok=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
     if engine == "none":
         return None
-    if engine == "kokoro":
+    if engine not in {"chatterbox", "chatterbox-v3"}:
+        raise ValueError("Unsupported voice engine. Choose Chatterbox V3 or No narration.")
+
+    import numpy as np
+    import soundfile as sf
+    import torch
+
+    selected_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    model = load_chatterbox(selected_device)
+
+    # The selected reference must belong to the user or be explicitly licensed/authorized.
+    if voice_reference:
+        reference = Path(voice_reference)
+        if not reference.is_file():
+            raise ValueError("The selected voice reference file was not found. Upload it again.")
         try:
-            from kokoro import KPipeline
-            import soundfile as sf
+            model.prepare_conditionals(str(reference), exaggeration=float(exaggeration))
         except Exception as exc:
-            raise RuntimeError("Kokoro is not installed. Run pip install -r requirements-tts.txt.") from exc
-        lang_code = "h" if language.lower().startswith(("hi","hing","roman")) else "a"
-        pipeline = KPipeline(lang_code=lang_code)
-        valid = {item["id"] for item in KOKORO_VOICES}
-        voice = voice_id if voice_id in valid else "hm_omega"
-        chunks = [np.asarray(audio,dtype=np.float32) for _,_,audio in pipeline(text,voice=voice)]
-        if not chunks:
-            raise RuntimeError("Kokoro returned no audio. Check language and voice settings.")
-        audio_data = np.concatenate(chunks)
-        sf.write(str(target),audio_data,24000)
-        return {"path":str(target),"sample_rate":24000,"engine":"kokoro","voice":voice}
-    if engine == "chatterbox":
-        if not voice_reference:
-            raise ValueError("Chatterbox requires a reference recording that you own or are authorized to use.")
+            raise RuntimeError(
+                "Could not read the voice sample. Use a clean 5–10 second WAV/MP3 recording with one speaker."
+            ) from exc
+
+    chunks = _text_chunks(text)
+    audio_parts = []
+    for index, part in enumerate(chunks):
         try:
-            import torch
-            import soundfile as sf
-            from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+            wav = model.generate(
+                part,
+                language_id=language,
+                exaggeration=float(exaggeration),
+                cfg_weight=float(cfg_weight),
+                temperature=float(temperature),
+            )
         except Exception as exc:
-            raise RuntimeError("Chatterbox is not installed. It is an experimental, archived optional engine.") from exc
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        model = ChatterboxMultilingualTTS.from_pretrained(device=device)
-        audio = model.generate(text,language_id="hi",audio_prompt_path=voice_reference)
-        samples = audio.squeeze().detach().cpu().numpy() if hasattr(audio,"detach") else np.asarray(audio).squeeze()
-        sample_rate = int(getattr(model,"sr",24000))
-        sf.write(str(target),samples,sample_rate)
-        return {"path":str(target),"sample_rate":sample_rate,"engine":"chatterbox","voice":"reference"}
-    raise ValueError("Unsupported voice engine.")
+            raise RuntimeError(f"Chatterbox failed while generating narration chunk {index + 1}/{len(chunks)}: {exc}") from exc
+        samples = wav.detach().float().cpu().numpy().reshape(-1) if hasattr(wav, "detach") else np.asarray(wav).reshape(-1)
+        if samples.size:
+            audio_parts.append(samples.astype(np.float32))
+            if index < len(chunks) - 1:
+                audio_parts.append(np.zeros(int(model.sr * 0.12), dtype=np.float32))
+
+    if not audio_parts:
+        raise RuntimeError("Chatterbox returned no audio.")
+    audio = np.concatenate(audio_parts)
+    sf.write(str(target), audio, int(model.sr))
+    return {
+        "path": str(target),
+        "sample_rate": int(model.sr),
+        "engine": "chatterbox-v3",
+        "voice": "reference" if voice_reference else "built-in",
+        "chunks": len(chunks),
+        "device": selected_device,
+    }
+
+
+def preview_voice(
+    text: str,
+    output_path: str | Path,
+    voice_reference: str | None = None,
+    exaggeration: float = 0.5,
+    cfg_weight: float = 0.5,
+    temperature: float = 0.8,
+):
+    preview_text = text.strip()[:260] or "Assalamu alaikum. Aaj ki kahani mein ek aham sabaq hai."
+    return synthesize(
+        preview_text,
+        output_path,
+        engine="chatterbox",
+        voice_id="chatterbox-v3",
+        language="hi",
+        voice_reference=voice_reference,
+        exaggeration=exaggeration,
+        cfg_weight=cfg_weight,
+        temperature=temperature,
+    )
