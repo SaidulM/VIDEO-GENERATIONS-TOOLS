@@ -1,0 +1,8 @@
+# Colab-only packages; no video model checkpoints are installed here.
+openai>=1.40,<3
+google-genai>=2.33.0
+ipywidgets>=8.1,<9
+requests>=2.32,<3
+soundfile>=0.12,<1
+numpy>=1.26,<3
+Pillow>=10.4,<13

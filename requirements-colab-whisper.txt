@@ -1,0 +1,2 @@
+# Optional caption alignment model. Install only when you want audio-aligned captions.
+faster-whisper>=1.1,<2

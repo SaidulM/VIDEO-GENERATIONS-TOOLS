@@ -1,5 +1,5 @@
-# Google Colab
+# Colab notebooks
 
-Open the notebook directly in Colab: https://colab.research.google.com/github/SaidulM/VIDEO-GENERATIONS-TOOLS/blob/main/notebooks/colab_studio.ipynb
+- [Short Story Studio V2 — Creator Workspace](https://colab.research.google.com/github/SaidulM/VIDEO-GENERATIONS-TOOLS/blob/studio-v2/notebooks/short_story_studio_v2.ipynb)
 
-The notebook uses native ipywidgets in the Colab notebook itself; it does not launch a standalone web server. Optional Chatterbox and AnimateDiff weights are downloaded on demand to the temporary Colab VM, not committed to GitHub.
+V2 is notebook-native and does not launch a public web server. It uses HyperFrames for HTML/CSS/GSAP-to-MP4 rendering, optional Gemini TTS or Chatterbox, and Pexels/Pixabay stock footage APIs. See the root README and docs/V2_ARCHITECTURE.md for actual capabilities and limitations.
