@@ -31,7 +31,10 @@ def voice_catalog():
     ]
 
 
-@lru_cache(maxsize=2)
+_CHATTERBOX_MODEL = None
+_CHATTERBOX_DEVICE = None
+
+
 def load_chatterbox(device: str = "cuda"):
     """Load Chatterbox only when requested; cache it for the current process."""
     try:
@@ -47,10 +50,19 @@ def load_chatterbox(device: str = "cuda"):
             "No CUDA GPU is available. Use a Colab GPU runtime for Chatterbox, or choose No narration. "
             "CPU inference is possible but very slow on an older laptop."
         )
+    global _CHATTERBOX_MODEL, _CHATTERBOX_DEVICE
     selected = torch.device(device)
+    if _CHATTERBOX_MODEL is not None and _CHATTERBOX_DEVICE == device:
+        return _CHATTERBOX_MODEL
+    if _CHATTERBOX_MODEL is not None:
+        unload_chatterbox()
     try:
-        return ChatterboxMultilingualTTS.from_pretrained(device=selected, t3_model="v3")
+        _CHATTERBOX_MODEL = ChatterboxMultilingualTTS.from_pretrained(device=selected, t3_model="v3")
+        _CHATTERBOX_DEVICE = device
+        return _CHATTERBOX_MODEL
     except Exception as exc:
+        _CHATTERBOX_MODEL = None
+        _CHATTERBOX_DEVICE = None
         raise RuntimeError(
             "Chatterbox V3 could not load its model assets. Check the Colab GPU, internet access and available RAM/VRAM."
         ) from exc
@@ -138,6 +150,7 @@ def synthesize(
         raise RuntimeError("Chatterbox returned no audio.")
     audio = np.concatenate(audio_parts)
     sf.write(str(target), audio, int(model.sr))
+    unload_chatterbox()
     return {
         "path": str(target),
         "sample_rate": int(model.sr),
@@ -146,6 +159,34 @@ def synthesize(
         "chunks": len(chunks),
         "device": selected_device,
     }
+
+
+def unload_chatterbox():
+    """Release the cached TTS model from GPU memory after preview/render."""
+    global _CHATTERBOX_MODEL
+    model = _CHATTERBOX_MODEL
+    if model is None:
+        return
+    try:
+        for name in ("t3", "s3gen", "ve"):
+            module = getattr(model, name, None)
+            if module is not None:
+                module.to("cpu")
+        conditionals = getattr(model, "conds", None)
+        if conditionals is not None:
+            conditionals.to("cpu")
+        model.device = "cpu"
+    except Exception:
+        pass
+    _CHATTERBOX_MODEL = None
+    try:
+        import gc
+        import torch
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
 
 
 def preview_voice(
